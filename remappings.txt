@@ -1,5 +1,5 @@
 @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
-chainlink-brownie-contracts/=lib/chainlink-brownie-contracts/
+@chainlink/=lib/chainlink-brownie-contracts/
 erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/
 forge-std/=lib/forge-std/src/
 foundry-devops/=lib/foundry-devops/
