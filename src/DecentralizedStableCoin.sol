@@ -16,15 +16,22 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
  * It is governed entirely by DSCEngine.
  */
 contract DecentralizedStableCoin is ERC20Burnable, Ownable {
-    /* Errors */
+
+    ///////////////////
+    // Errors        //
+    ///////////////////
     error DecentralizedStableCoin__MustBeMoreThanZero();
     error DecentralizedStableCoin__BurnAmountExceedsBalance();
     error DecentralizedStableCoin__NotZeroAddress();
 
-    /* Constructor */
+    ///////////////////
+    // Constructor   //
+    ///////////////////
     constructor(address initialOwner) ERC20("BinnaStableCoin", "BUSD") Ownable(initialOwner) {}
 
-    /* Functions */
+    ///////////////////
+    // Functions     //
+    ///////////////////
 
     /**
      * @notice Burns tokens from the owner's balance (The Engine).
