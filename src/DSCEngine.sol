@@ -28,7 +28,7 @@ contract DSCEngine is ReentrancyGuard {
     ///////////////////
     // Types         //
     ///////////////////
-    using OracleLib for AggregatorV3Interface;
+    using OracleLib for AggregatorV3Interface; // Adds stale-data checking.
 
     ///////////////////
     // Errors        //
@@ -46,20 +46,20 @@ contract DSCEngine is ReentrancyGuard {
     // State Variables //
     ///////////////////
 
-    uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10;
-    uint256 private constant PRECISION = 1e18;
+    uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10; // To bring 8 Decimals to 18
+    uint256 private constant PRECISION = 1e18; // 18 Decimals of Precision
     uint256 private constant LIQUIDATION_THRESHOLD = 50; // 200% Overcollateralization
-    uint256 private constant LIQUIDATION_PRECISION = 100;
-    uint256 private constant MIN_HEALTH_FACTOR = 1e18;
+    uint256 private constant LIQUIDATION_PRECISION = 100; // Precision for percentage calcs
+    uint256 private constant MIN_HEALTH_FACTOR = 1e18; // HF < 1 -> liquidation
     uint256 private constant LIQUIDATION_BONUS = 10; // 10% Bonus
 
     // Immutables (Gas Efficient)
     DecentralizedStableCoin private immutable i_dsc;
 
     // Mappings (O(1) Access)
-    mapping(address token => address priceFeed) private s_priceFeeds;
+    mapping(address token => address priceFeed) private s_priceFeeds; // token address -> price feed address
     mapping(address user => mapping(address token => uint256 amount)) private s_collateralDeposited;
-    mapping(address user => uint256 amountDscMinted) private s_DSCMinted;
+    mapping(address user => uint256 amountDscMinted) private s_DSCMinted; 
 
     // Arrays (For Iteration)
     address[] private s_collateralTokens;
@@ -120,34 +120,6 @@ contract DSCEngine is ReentrancyGuard {
         depositCollateral(tokenCollateralAddress, amountCollateral);
         mintDsc(amountDscToMint);
     }
-
-    /**
-     * @param tokenCollateralAddress The collateral address to redeem
-     * @param amountCollateral The amount of collateral to redeem
-     * @param amountDscToBurn The amount of DSC to burn
-     * @notice This function burns DSC and redeems underlying collateral in one transaction
-     */
-    function redeemCollateralForDsc(address tokenCollateralAddress, uint256 amountCollateral, uint256 amountDscToBurn)
-        external
-    {
-        burnDsc(amountDscToBurn);
-        redeemCollateral(tokenCollateralAddress, amountCollateral);
-        // redeemCollateral checks health factor already
-    }
-
-    /**
-     * @notice Follows CEI: Checks, Effects, Interactions
-     * @notice If the user has DSC minted, this might fail if their Health Factor breaks
-     */
-    function redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral)
-        public
-        moreThanZero(amountCollateral)
-        nonReentrant
-    {
-        _redeemCollateral(msg.sender, msg.sender, tokenCollateralAddress, amountCollateral);
-        _revertIfHealthFactorIsBroken(msg.sender);
-    }
-
     /*
      * @notice Follows CEI: Checks, Effects, Interactions
      * @param tokenCollateralAddress The address of the token to deposit as collateral
@@ -193,10 +165,41 @@ contract DSCEngine is ReentrancyGuard {
         }
     }
 
+    /**
+     * @param amount The amount of DSC to burn
+     * @notice Burns DSC to reduce your debt position
+     */
     function burnDsc(uint256 amount) public moreThanZero(amount) {
         _burnDsc(amount, msg.sender, msg.sender);
         // Usually, burning improves health factor, so we don't strictly need to check it.
         // But if we allow minting in the same block, checking it is safe.
+        _revertIfHealthFactorIsBroken(msg.sender);
+    }
+
+    /**
+     * @param tokenCollateralAddress The collateral address to redeem
+     * @param amountCollateral The amount of collateral to redeem
+     * @param amountDscToBurn The amount of DSC to burn
+     * @notice This function burns DSC and redeems underlying collateral in one transaction
+     */
+    function redeemCollateralForDsc(address tokenCollateralAddress, uint256 amountCollateral, uint256 amountDscToBurn)
+        external
+    {
+        burnDsc(amountDscToBurn);
+        redeemCollateral(tokenCollateralAddress, amountCollateral);
+        // redeemCollateral checks health factor already
+    }
+
+    /**
+     * @notice Follows CEI: Checks, Effects, Interactions
+     * @notice If the user has DSC minted, this might fail if their Health Factor breaks
+     */
+    function redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral)
+        public
+        moreThanZero(amountCollateral)
+        nonReentrant
+    {
+        _redeemCollateral(msg.sender, msg.sender, tokenCollateralAddress, amountCollateral);
         _revertIfHealthFactorIsBroken(msg.sender);
     }
 

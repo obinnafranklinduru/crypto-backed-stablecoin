@@ -90,23 +90,23 @@ contract Handler is Test {
     // This breaks the invariant OFTEN. We include it to see if the protocol handles bad debt correctly.
     // For now, we constrain it to prevent instant insolvency from ruining the test run.
     function updateCollateralPrice(uint96 newPrice) public {
-        // Example: Price can vary by +/- 10% or set a hard min/max
-        // Here we just prevent the "infinite" value
-        // let's say max price is $100,000 (100000e8)
-        // and min price is $1 (1e8)
+        // // Example: Price can vary by +/- 10% or set a hard min/max
+        // // Here we just prevent the "infinite" value
+        // // let's say max price is $100,000 (100000e8)
+        // // and min price is $1 (1e8)
         
-        int256 newPriceInt = int256(uint256(newPrice));
+        // int256 newPriceInt = int256(uint256(newPrice));
         
-        // If the fuzzer gives us a huge number, we clamp it or return
-        // Using bound to keep it realistic (e.g. between $1 and $10,000)
-        // Note: MockV3Aggregator decimals is 8
-        int256 minPrice = 1e8; // $1
-        int256 maxPrice = 10000e8; // $10,000
+        // // If the fuzzer gives us a huge number, we clamp it or return
+        // // Using bound to keep it realistic (e.g. between $1 and $10,000)
+        // // Note: MockV3Aggregator decimals is 8
+        // int256 minPrice = 1e8; // $1
+        // int256 maxPrice = 10000e8; // $10,000
         
-        // We use valid values to avoid breaking the math
-        newPriceInt = int256(bound(uint256(newPriceInt), uint256(minPrice), uint256(maxPrice)));
+        // // We use valid values to avoid breaking the math
+        // newPriceInt = int256(bound(uint256(newPriceInt), uint256(minPrice), uint256(maxPrice)));
 
-        ethUsdPriceFeed.updateAnswer(newPriceInt);
+        // ethUsdPriceFeed.updateAnswer(newPriceInt);
     }
 
     // HELPER: Pick a random token
