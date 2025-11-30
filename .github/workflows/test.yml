@@ -1,16 +1,17 @@
-name: CI
+name: Monad Foundry CI
 
 on:
   push:
+    branches: [main, master]
   pull_request:
-  workflow_dispatch:
+    branches: [main, master]
 
 env:
   FOUNDRY_PROFILE: ci
 
 jobs:
   check:
-    name: Foundry project
+    name: Foundry Project Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,22 +20,17 @@ jobs:
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
 
       - name: Show Forge version
-        run: |
-          forge --version
+        run: forge --version
 
-      - name: Run Forge fmt
-        run: |
-          forge fmt --check
-        id: fmt
+      - name: Check Formatting
+        run: forge fmt --check
 
-      - name: Run Forge build
-        run: |
-          forge build --sizes
-        id: build
+      - name: Build Contracts
+        run: forge build --sizes
 
-      - name: Run Forge tests
-        run: |
-          forge test -vvv
-        id: test
+      - name: Run Tests
+        run: forge test -vvv

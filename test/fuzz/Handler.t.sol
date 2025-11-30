@@ -14,12 +14,11 @@ contract Handler is Test {
     ERC20DecimalsMock weth;
     ERC20DecimalsMock wbtc;
 
+    // Ghost Variables
     uint256 public timesMintIsCalled;
     address[] public usersWithCollateral;
     MockV3Aggregator public ethUsdPriceFeed;
 
-    // We can't use msg.sender in fuzz tests because it's random.
-    // We use a set of "Ghost Users" to simulate real traffic.
     uint256 MAX_DEPOSIT_SIZE = type(uint96).max; 
 
     constructor(DSCEngine _dscEngine, DecentralizedStableCoin _dsc) {
@@ -33,7 +32,7 @@ contract Handler is Test {
         ethUsdPriceFeed = MockV3Aggregator(dsce.getCollateralTokenPriceFeed(address(weth)));
     }
 
-    // FUNNEL 1: DEPOSIT
+    // --- FUNNEL 1: DEPOSIT COLLATERAL ---
     function depositCollateral(uint256 collateralSeed, uint256 amountCollateral) public {
         ERC20DecimalsMock collateral = _getCollateralFromSeed(collateralSeed);
         amountCollateral = bound(amountCollateral, 1, MAX_DEPOSIT_SIZE);
@@ -48,7 +47,7 @@ contract Handler is Test {
         usersWithCollateral.push(msg.sender);
     }
 
-    // FUNNEL 2: REDEEM
+    // --- FUNNEL 2: REDEEM COLLATERAL ---
     function redeemCollateral(uint256 collateralSeed, uint256 amountCollateral) public {
         ERC20DecimalsMock collateral = _getCollateralFromSeed(collateralSeed);
         uint256 maxCollateralToRedeem = dsce.getCollateralBalanceOfUser(msg.sender, address(collateral));
@@ -64,7 +63,7 @@ contract Handler is Test {
         vm.stopPrank();
     }
 
-    // FUNNEL 3: MINT DSC
+    // --- FUNNEL 3: MINT DSC ---
     function mintDsc(uint256 amount, uint256 addressSeed) public {
         if (usersWithCollateral.length == 0) return;
         
@@ -86,30 +85,45 @@ contract Handler is Test {
         timesMintIsCalled++;
     }
 
-    // HELPER: PRICE SHOCK (Simulate Market Volatility)
-    // This breaks the invariant OFTEN. We include it to see if the protocol handles bad debt correctly.
-    // For now, we constrain it to prevent instant insolvency from ruining the test run.
-    function updateCollateralPrice(uint96 newPrice) public {
-        // // Example: Price can vary by +/- 10% or set a hard min/max
-        // // Here we just prevent the "infinite" value
-        // // let's say max price is $100,000 (100000e8)
-        // // and min price is $1 (1e8)
+    // --- FUNNEL 4: LIQUIDATE ---
+    function liquidate(uint256 collateralSeed, uint256 userToBeLiquidatedIndex, uint256 debtToCover) public {
+        if (usersWithCollateral.length == 0) return;
         
-        // int256 newPriceInt = int256(uint256(newPrice));
-        
-        // // If the fuzzer gives us a huge number, we clamp it or return
-        // // Using bound to keep it realistic (e.g. between $1 and $10,000)
-        // // Note: MockV3Aggregator decimals is 8
-        // int256 minPrice = 1e8; // $1
-        // int256 maxPrice = 10000e8; // $10,000
-        
-        // // We use valid values to avoid breaking the math
-        // newPriceInt = int256(bound(uint256(newPriceInt), uint256(minPrice), uint256(maxPrice)));
+        // 1. Select a Victim
+        address victim = usersWithCollateral[userToBeLiquidatedIndex % usersWithCollateral.length];
 
-        // ethUsdPriceFeed.updateAnswer(newPriceInt);
+        // 2. Check Solvency (We only liquidate if they are actually underwater)
+        (uint256 totalDscMinted, uint256 collateralValueInUsd) = dsce.getAccountInformation(victim);
+        int256 marginOfSafety = int256(collateralValueInUsd) / 2 - int256(totalDscMinted);
+        
+        // If margin is positive, they are healthy. Return.
+        if (marginOfSafety >= 0) return;
+
+        // 3. Bound debt coverage to their actual debt
+        debtToCover = bound(debtToCover, 1, totalDscMinted);
+
+        // 4. Bootstrap the Liquidator (msg.sender)
+        // The random msg.sender needs money to pay off the debt. 
+        ERC20DecimalsMock collateral = _getCollateralFromSeed(collateralSeed);
+        uint256 collateralAmount = dsce.getTokenAmountFromUsd(address(collateral), debtToCover * 2);
+
+        vm.startPrank(msg.sender);
+        
+        // Liquidator gets collateral -> Deposits -> Mints DSC
+        collateral.mint(msg.sender, collateralAmount);
+        collateral.approve(address(dsce), collateralAmount);
+        dsce.depositCollateralAndMintDsc(address(collateral), collateralAmount, debtToCover);
+        
+        // Liquidator approves Engine to burn DSC
+        dsc.approve(address(dsce), debtToCover);
+
+        // Execute
+        dsce.liquidate(address(collateral), victim, debtToCover);
+        
+        vm.stopPrank();
     }
 
-    // HELPER: Pick a random token
+    // --- INTERNAL HELPER ---
     function _getCollateralFromSeed(uint256 collateralSeed) private view returns (ERC20DecimalsMock) {
         if (collateralSeed % 2 == 0) {
             return weth;

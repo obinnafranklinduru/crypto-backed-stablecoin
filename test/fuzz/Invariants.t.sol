@@ -33,8 +33,7 @@ contract Invariants is StdInvariant, Test {
 
     /**
      * @notice THE GOLDEN RULE
-     * Total Supply of DSC should NEVER exceed Total Value of Collateral
-     * If this fails, the protocol is insolvent.
+     * Total Value of Collateral > Total Supply of DSC
      */
     function invariant_protocolMustHaveMoreValueThanTotalSupply() public view {
         // 1. Get Total Supply of Debt
@@ -49,11 +48,8 @@ contract Invariants is StdInvariant, Test {
 
         uint256 totalCollateralValue = wethValue + wbtcValue;
 
-        console.log("Total Supply:", totalSupply);
-        console.log("Total Collateral Value:", totalCollateralValue);
-        console.log("Times Mint Called:", handler.timesMintIsCalled());
-
         // 3. Assert
+        // This will only hold true if the protocol is overcollateralized
         assert(totalCollateralValue >= totalSupply);
     }
 }

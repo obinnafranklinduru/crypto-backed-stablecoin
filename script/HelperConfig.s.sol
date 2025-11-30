@@ -55,12 +55,16 @@ contract HelperConfig is Script {
 
         vm.stopBroadcast();
 
-        return NetworkConfig({
+        activeNetworkConfig = NetworkConfig({
             wethUsdPriceFeed: address(ethUsdPriceFeed),
             wbtcUsdPriceFeed: address(btcUsdPriceFeed),
             weth: address(weth),
             wbtc: address(wbtc),
-            deployerKey: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+            deployerKey: 
+                 // Default Anvil private key #0
+                 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
         });
+
+        return activeNetworkConfig;
     }
 }
