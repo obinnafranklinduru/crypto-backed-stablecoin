@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Script} from "forge-std/Script.sol";
-import {MockV3Aggregator} from "../test/mocks/MockV3Aggregator.sol";
-import {ERC20DecimalsMock} from "../test/mocks/ERC20DecimalsMock.sol";
+import { Script } from "forge-std/Script.sol";
+import { MockV3Aggregator } from "../test/mocks/MockV3Aggregator.sol";
+import { ERC20DecimalsMock } from "../test/mocks/ERC20DecimalsMock.sol";
 
 contract HelperConfig is Script {
     struct NetworkConfig {
@@ -21,7 +21,7 @@ contract HelperConfig is Script {
     NetworkConfig public activeNetworkConfig;
 
     constructor() {
-        if (block.chainid == 11155111) {
+        if (block.chainid == 11_155_111) {
             activeNetworkConfig = getSepoliaEthConfig();
         } else {
             activeNetworkConfig = getOrCreateAnvilEthConfig();
@@ -60,9 +60,7 @@ contract HelperConfig is Script {
             wbtcUsdPriceFeed: address(btcUsdPriceFeed),
             weth: address(weth),
             wbtc: address(wbtc),
-            deployerKey: 
-                 // Default Anvil private key #0
-                 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+            deployerKey: vm.envUint("DEFAULT_ANVIL_PRIVATE_KEY")
         });
 
         return activeNetworkConfig;
