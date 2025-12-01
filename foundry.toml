@@ -18,11 +18,6 @@ fs_permissions = [{ access = "read", path = "./" }]
 # Reporting
 gas_reports = ["*"]
 
-# Metadata
-metadata = true
-metadata_hash = "none" 
-use_literal_content = true 
-
 [fmt]
 line_length = 120
 tab_width = 4
